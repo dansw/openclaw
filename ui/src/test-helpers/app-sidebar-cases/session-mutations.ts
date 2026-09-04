@@ -156,10 +156,10 @@ describe("AppSidebar session mutation feedback", () => {
     let menu = await openMenu();
     const current = { ...row, label: "Latest" };
 
-    // The filtered roster changes before rendering; the primary roster keeps its old row.
-    publish([current]);
+    // The filtered roster changes while the action loads; the primary roster keeps its old row.
     menu.querySelector<HTMLElement>(actionSelector)!.click();
-    expect(run.mock.calls.length).toBe(1);
+    publish([current]);
+    await waitForFast(() => expect(run).toHaveBeenCalledOnce());
     expect(run.mock.calls[0]![0].sessionKey).toBe(row.key);
     expect(run.mock.calls[0]![0].session).toEqual(current);
     await sidebar.updateComplete;
@@ -167,8 +167,8 @@ describe("AppSidebar session mutation feedback", () => {
     menu = await openMenu();
     publish([{ ...current, hasActiveRun: true }]);
     menu.querySelector<HTMLElement>(actionSelector)!.click();
-    expect(run.mock.calls.length).toBe(1);
     await waitForFast(() => expect(toast.textContent).toContain("Reopen the session menu."));
+    expect(run).toHaveBeenCalledOnce();
   });
 
   it("does not invoke a plugin for a removed or replaced menu session", async () => {
@@ -182,8 +182,8 @@ describe("AppSidebar session mutation feedback", () => {
       const menu = await openMenu();
       publish(rows);
       menu.querySelector<HTMLElement>(actionSelector)!.click();
-      expect(run.mock.calls.length).toBe(0);
       await waitForFast(() => expect(toast.textContent).toContain("Reopen the session menu."));
+      expect(run).not.toHaveBeenCalled();
       toast.remove();
     }
 
