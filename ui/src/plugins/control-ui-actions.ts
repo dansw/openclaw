@@ -46,6 +46,6 @@ export async function runControlUiPluginAction(
       (candidate) => candidate.key === params.id && candidate.value.placement === params.placement,
     );
   // Keep the clicked registration's lifetime, but read current session state after loading.
-  const { runControlUiPluginAction } = await import("./control-ui-actions.runtime.ts");
-  return runControlUiPluginAction({ ...params, session: params.getSession() }, entry);
+  const { runControlUiPluginAction: run } = await import("./control-ui-actions.runtime.ts");
+  return run({ ...params, session: params.getSession() }, entry);
 }
