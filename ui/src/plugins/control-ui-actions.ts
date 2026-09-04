@@ -1,8 +1,7 @@
-import type { BoardGetParams } from "@openclaw/gateway-protocol";
-import type { ControlUiAction, ControlUiSession } from "../../../src/plugin-sdk/control-ui.js";
+import type { ControlUiSession } from "../../../src/plugin-sdk/control-ui.js";
 import type { PluginSessionMenuAction } from "../components/session-menu.ts";
+import type { ControlUiPluginActionParams } from "./control-ui-actions.runtime.ts";
 import type { ControlUiPluginCapability } from "./control-ui-capability.ts";
-import { scopeControlUiHost } from "./control-ui-scope.ts";
 
 export function pluginSessionMenuActions(
   runtime: ControlUiPluginCapability,
@@ -35,46 +34,18 @@ export function pluginSessionMenuActions(
 }
 
 export async function runControlUiPluginAction(
-  params: BoardGetParams & {
+  params: Omit<ControlUiPluginActionParams, "session"> & {
     runtime: ControlUiPluginCapability;
     id: string;
-    placement: ControlUiAction["placement"];
-    session?: ControlUiSession;
-    signal: AbortSignal;
+    getSession: () => ControlUiSession | undefined;
   },
 ): Promise<void> {
-  const retry =
-    params.placement === "session"
-      ? "Reopen the session menu."
-      : "Try again from the current view.";
-  if (params.placement === "session" && !params.session) {
-    throw new Error(`This session is no longer available. ${retry}`);
-  }
   const entry = params.runtime
     .registrations("actions")
     .find(
       (candidate) => candidate.key === params.id && candidate.value.placement === params.placement,
     );
-  if (!entry) {
-    throw new Error(`This plugin action is no longer active. ${retry}`);
-  }
-  const signal = AbortSignal.any([params.signal, entry.signal]);
-  signal.throwIfAborted();
-  const context = {
-    sessionKey: params.sessionKey,
-    agentId: params.agentId ?? params.session?.agentId,
-    session: params.session ? structuredClone(params.session) : undefined,
-  };
-  const state = entry.value.resolve?.(context);
-  // A resolver can synchronously withdraw its own registration.
-  signal.throwIfAborted();
-  if (state?.hidden || state?.disabled) {
-    throw new Error(`This plugin action is currently unavailable. ${retry}`);
-  }
-  await entry.value.run({
-    ...context,
-    host: scopeControlUiHost(entry.host, signal),
-    signal,
-  });
-  signal.throwIfAborted();
+  // Keep the clicked registration's lifetime, but read current session state after loading.
+  const { runControlUiPluginAction } = await import("./control-ui-actions.runtime.ts");
+  return runControlUiPluginAction({ ...params, session: params.getSession() }, entry);
 }

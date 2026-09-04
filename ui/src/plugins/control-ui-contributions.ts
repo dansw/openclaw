@@ -204,7 +204,7 @@ class ControlUiPluginContributions extends OpenClawLightDomContentsElement {
                 placement: entry.value.placement,
                 sessionKey: this.sessionKey,
                 agentId: this.agentId,
-                session: this.currentSession(),
+                getSession: () => this.currentSession(),
                 signal,
               });
             } catch (error) {

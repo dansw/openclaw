@@ -265,7 +265,7 @@ describe("native plugin session actions", () => {
       const button = () => element.querySelector<HTMLButtonElement>("button");
       expect(button()?.textContent?.trim()).toBe("Review unavailable");
       button()?.click();
-      expect(run).toHaveBeenCalledOnce();
+      await vi.waitFor(() => expect(run).toHaveBeenCalledOnce());
       expect(run.mock.calls[0]?.[0].session).toBeUndefined();
       expect(resolve).toHaveBeenLastCalledWith({
         sessionKey: "global",
@@ -284,7 +284,7 @@ describe("native plugin session actions", () => {
       await element.updateComplete;
       expect(button()?.textContent?.trim()).toBe("Review Writer");
       button()?.click();
-      expect(run).toHaveBeenCalledTimes(2);
+      await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(2));
       expect(run.mock.calls[1]?.[0].session).toMatchObject({
         key: "global",
         agentId: "writer",
@@ -302,6 +302,7 @@ describe("native plugin session actions", () => {
         session: { key: "global", kind: "global", agentId: "main", updatedAt: 1, label: "Main" },
       });
       element.querySelector<HTMLButtonElement>("button")?.click();
+      await vi.waitFor(() => expect(run).toHaveBeenCalledOnce());
       const invocation = run.mock.calls[0]?.[0];
       if (!invocation) {
         throw new Error("Expected the pane's plugin action to run");
@@ -333,6 +334,7 @@ describe("native plugin session actions", () => {
       });
       const retained = element.querySelector<HTMLButtonElement>("button")!;
       retained.click();
+      await vi.waitFor(() => expect(run).toHaveBeenCalledOnce());
       const invocation = run.mock.calls[0]?.[0];
       if (!invocation) {
         throw new Error("Expected the visible plugin action to run");
@@ -361,7 +363,7 @@ describe("native plugin session actions", () => {
         host.sessions.open(destination);
       });
       retained.click();
-      expect(run).toHaveBeenCalledTimes(2);
+      await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(2));
       expect(run.mock.calls[1]?.[0].signal.aborted).toBe(false);
       expect(setSessionKey).toHaveBeenCalledExactlyOnceWith(destination.sessionKey);
       expect(navigate).toHaveBeenCalledOnce();
@@ -389,10 +391,26 @@ describe("native plugin session actions", () => {
 
     element.querySelector<HTMLButtonElement>("button")!.click();
 
+    await vi.waitFor(() => expect(element.querySelector("button")).toBeNull());
     expect(run.mock.calls.length).toBe(0);
-    await element.updateComplete;
-    expect(element.querySelector("button")).toBeNull();
   });
+
+  it.each(["unregister", "disconnect", "disable"] as const)(
+    "does not admit an action after %s while its runtime loads",
+    async (retirement) => {
+      const { element, run, unregister, sessions } = await mountActions();
+      element.querySelector<HTMLButtonElement>("button")!.click();
+      if (retirement === "unregister") {
+        unregister();
+      } else if (retirement === "disconnect") {
+        element.remove();
+      } else {
+        sessions.patchRowLocal(sessionKey, { hasActiveRun: true });
+      }
+      await vi.dynamicImportSettled();
+      expect(run).not.toHaveBeenCalled();
+    },
+  );
 
   it.each(["header", "composer"] as const)(
     "updates %s action presentation and retires hidden invocations",
@@ -407,6 +425,7 @@ describe("native plugin session actions", () => {
         host.sessions.open({ sessionKey: "agent:writer:resumed", agentId: "writer" });
       });
       button()?.click();
+      await vi.waitFor(() => expect(run).toHaveBeenCalledOnce());
       const invocation = run.mock.calls[0]?.[0];
       if (!invocation) {
         throw new Error("Expected the visible action to run");
@@ -461,6 +480,7 @@ describe("native plugin session actions", () => {
     // Click in the same turn as publication, before Lit can update the old button.
     sessions.patchRowLocal(sessionKey, { hasActiveRun: true });
     button().click();
+    await vi.dynamicImportSettled();
     expect(run.mock.calls.length).toBe(0);
     await element.updateComplete;
 
@@ -473,9 +493,9 @@ describe("native plugin session actions", () => {
 
     sessions.patchRowLocal(sessionKey, { archived: false });
     await element.updateComplete;
-    sessions.patchRowLocal(sessionKey, { label: "Latest" });
     button().click();
-    expect(run.mock.calls.length).toBe(1);
+    sessions.patchRowLocal(sessionKey, { label: "Latest" });
+    await vi.waitFor(() => expect(run).toHaveBeenCalledOnce());
     const invocation = run.mock.calls[0]![0];
     expect(invocation.sessionKey).toBe(sessionKey);
     expect(invocation.session).toMatchObject({

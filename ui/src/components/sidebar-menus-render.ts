@@ -354,7 +354,7 @@ export function renderSidebarSessionMenuForController(controller: SidebarMenusCo
                   id: action.id,
                   placement: "session",
                   sessionKey: menu.session.key,
-                  session: currentPluginSession(),
+                  getSession: currentPluginSession,
                   signal: pluginActionSignal,
                 }).catch((error: unknown) => {
                   if (!pluginActionSignal.aborted) {

@@ -1779,9 +1779,10 @@ class SessionsPage extends OpenClawLightDomElement {
         id,
         placement: "session",
         sessionKey: target.key,
-        session: this.result?.sessions.find(
-          (row) => row.key === target.key && row.sessionId === target.sessionId,
-        ),
+        getSession: () =>
+          this.result?.sessions.find(
+            (row) => row.key === target.key && row.sessionId === target.sessionId,
+          ),
         signal: this.pluginActionLifetime.signal,
       });
     } catch (error) {

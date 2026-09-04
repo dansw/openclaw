@@ -108,10 +108,10 @@ describe("sessions page plugin actions", () => {
     let menu = await openMenu();
     const current = { ...row, label: "Latest" };
 
-    // Keep the old menu mounted while the scoped roster publishes a new row.
-    publish([current]);
     menu.querySelector<HTMLElement>(actionSelector)!.click();
-    expect(run.mock.calls.length).toBe(1);
+    // A roster update during action loading must reach the invocation.
+    publish([current]);
+    await vi.waitFor(() => expect(run).toHaveBeenCalledOnce());
     expect(run.mock.calls[0]![0].sessionKey).toBe(row.key);
     expect(run.mock.calls[0]![0].session).toEqual(current);
     await page.updateComplete;
@@ -150,7 +150,31 @@ describe("sessions page plugin actions", () => {
     expect(page.querySelector(actionSelector)).toBeNull();
   });
 
-  it.each(["disconnect", "detach"])("revokes plugin navigation after %s", async (ending) => {
+  it("does not invoke a replacement registration while an action is loading", async () => {
+    const { gateway } = createGateway({} as GatewayBrowserClient);
+    const context = createContext(gateway, createSessions());
+    const run = vi.fn();
+    const action: ControlUiAction = { id: "review", label: "Review", placement: "session", run };
+    const { entry, lifetime } = registerSessionPluginAction(context, action);
+    const row = {
+      key: "agent:main:review",
+      kind: "direct",
+      sessionId: "review-id",
+    } as GatewaySessionRow;
+    const page = await createRenderedPage(context, sessionsResult([row], 1));
+    const request = page.runPluginAction(entry.key, row);
+    lifetime.abort();
+    registerSessionPluginAction(context, action);
+    await request;
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["disconnect", "loading"],
+    ["detach", "loading"],
+    ["disconnect", "running"],
+    ["detach", "running"],
+  ])("revokes plugin navigation after %s while %s", async (ending, phase) => {
     const pending = createDeferred();
     const mutableGateway = createGateway({} as GatewayBrowserClient);
     const context = createContext(mutableGateway.gateway, createSessions());
@@ -173,7 +197,9 @@ describe("sessions page plugin actions", () => {
     } as GatewaySessionRow;
     const page = await createRenderedPage(context, sessionsResult([row], 1));
     const request = page.runPluginAction(entry.key, row);
-    expect(run).toHaveBeenCalledOnce();
+    if (phase === "running") {
+      await vi.waitFor(() => expect(run).toHaveBeenCalledOnce());
+    }
     if (ending === "disconnect") {
       mutableGateway.emit({ phase: "reconnecting" });
     } else {
@@ -181,6 +207,7 @@ describe("sessions page plugin actions", () => {
     }
     pending.resolve();
     await request;
+    expect(run).toHaveBeenCalledTimes(phase === "running" ? 1 : 0);
     expect(open).not.toHaveBeenCalled();
     expect(page.error).toBeNull();
   });
