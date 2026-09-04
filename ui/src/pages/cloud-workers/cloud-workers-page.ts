@@ -19,7 +19,7 @@ import {
 } from "../../components/settings-ui.ts";
 import { renderSettingsWorkspace } from "../../components/settings-workspace.ts";
 import { t } from "../../i18n/index.ts";
-import { registerCloudWorkersEnglish } from "../../i18n/locales/en-cloud-workers.ts";
+import { registerSettingsEnglish } from "../../i18n/locales/en-settings.ts";
 import { resolveEditableSnapshotConfig } from "../../lib/config/config-state-model.ts";
 import { formatUiError } from "../../lib/format-error.ts";
 import { canCallGatewayMethod } from "../../lib/gateway-methods.ts";
@@ -38,7 +38,7 @@ import {
   type ConfiguredCloudWorkerProfile,
 } from "./cloud-worker-config.ts";
 
-registerCloudWorkersEnglish();
+registerSettingsEnglish();
 
 const CLOUD_WORKERS_DOCS_URL = "https://docs.openclaw.ai/gateway/cloud-workers";
 type EditorState = { kind: "add" } | { kind: "edit"; profileId: string } | null;
