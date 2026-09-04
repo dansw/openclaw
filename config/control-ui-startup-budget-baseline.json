@@ -1,5 +1,5 @@
 {
-  "startupJsGzipBytes": 349565,
-  "reason": "Integrated Control UI and dependency changes since the 348668 B baseline, including chat face/visibility, locale, first-render, Meetings, and Appearance work, now measure 349565 B (+897 B, 0.26%); an independent exact-head build measured 349533 B (32 B lower, within the 64 B build-variance allowance); fixed 358400 B cap and existing allowances retained",
-  "updatedAt": "2026-09-03"
+  "startupJsGzipBytes": 350363,
+  "reason": "Integrated main Control UI and dependency changes since the 349565 B baseline measure 350363 B (+798 B, 0.23%) in CI on base 9f1c8a1 with no UI changes (https://github.com/openclaw/openclaw/actions/runs/33900973346/job/101114936855); the Sessions search candidate measures 350397 B (https://github.com/openclaw/openclaw/actions/runs/33899581202/job/101110479253), while same-toolchain paired builds show startup 350337 B -> 350314 B (-23 B); fixed 358400 B cap and existing 512 B growth plus 64 B build-variance allowances retained",
+  "updatedAt": "2026-09-04"
 }
